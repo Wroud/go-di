@@ -1,0 +1,27 @@
+{
+  "name": "go-di",
+  "version": "0.0.1",
+  "description": "Dependency injection",
+  "main": "build/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "mocha --opts mocha.opts"
+  },
+  "keywords": [
+    "di"
+  ],
+  "author": "Wroud",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chai": "^4.2.1",
+    "@types/chai-arrays": "^1.0.3",
+    "@types/mocha": "^5.2.7",
+    "@types/node": "^12.7.4",
+    "chai": "^4.2.0",
+    "chai-arrays": "^2.0.0",
+    "mocha": "^6.2.0",
+    "ts-node": "^8.3.0",
+    "typescript": "^3.6.2"
+  },
+  "dependencies": {}
+}
