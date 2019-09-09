@@ -11,16 +11,13 @@ interface IScope {
     provide<T>(f: () => T): T;
 }
 
-let currentScope: WeakMap<Function, any> | undefined;
+let currentScope: WeakMap<Function, any>[] = [];
 
 export function createService<T>(): IService<T> {
     return function service<TFunc>(
         f?: ServiceFunction<T, TFunc>
     ): TFunc | T | undefined {
-        if (!currentScope) {
-            throw new Error('No scope provided. Use scope(() => service())');
-        }
-        const serviceValue: T | undefined = currentScope.get(service);
+        const serviceValue: T | undefined = getService(service);
         return f
             ? f(serviceValue)
             : serviceValue;
@@ -35,11 +32,23 @@ export function createScope(): IScope {
             return this;
         },
         provide<T>(f: () => T): T {
-            const saveScope = currentScope;
-            currentScope = this.scope;
+            currentScope.unshift(this.scope);
             const service = f();
-            currentScope = saveScope;
+            currentScope.shift();
             return service;
         }
     }
+}
+
+function getService<T>(service: IService<T>): T | undefined {
+    if (currentScope.length == 0) {
+        throw new Error('No scope provided. Use scope(() => service())');
+    }
+    for (const list of currentScope) {
+        const find = list.get(service);
+        if (find != undefined) {
+            return find;
+        }
+    }
+    return undefined;
 }

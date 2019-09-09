@@ -66,6 +66,19 @@ describe('createService', () => {
         )).to.be.equal(testBValue + testCValue);
     })
 
+    it('scope inheritance', () => {
+        scope
+            .attach(serviceB, testBValue)
+            .attach(serviceA, undefined);
+
+        scopeSecond
+            .attach(serviceA, testCValue);
+
+        expect(scopeSecond.provide(() =>
+            scope.provide(() => serviceA((b = 0) => b) + serviceB((a = 0) => a))
+        )).to.be.equal(testBValue + testCValue);
+    })
+
     it('throw without scope', () => {
         scope.provide(() => { });
         expect(() => serviceA()).to.throw();
