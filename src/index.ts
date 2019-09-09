@@ -5,36 +5,40 @@ interface IService<T> {
         f: ServiceFunction<T, TFunc>
     ): TFunc;
 }
+interface IScope {
+    scope: WeakMap<Function, any>;
+    attach<T>(service: IService<T>, value: T): IScope;
+    provide<T>(f: () => T): T;
+}
 
 let currentScope: WeakMap<Function, any> | undefined;
 
 export function createService<T>(): IService<T> {
-    function service<TFunc>(
+    return function service<TFunc>(
         f?: ServiceFunction<T, TFunc>
     ): TFunc | T | undefined {
         if (!currentScope) {
             throw new Error('No scope provided. Use scope(() => service())');
         }
-        let serviceValue: T | undefined = currentScope.get(service);
+        const serviceValue: T | undefined = currentScope.get(service);
         return f
             ? f(serviceValue)
             : serviceValue;
     }
-    return service;
 }
 
-export function createScope() {
-    const scope = new WeakMap();
+export function createScope(): IScope {
     return {
+        scope: new WeakMap(),
         attach<T>(service: IService<T>, value: T) {
-            scope.set(service, value);
+            this.scope.set(service, value);
             return this;
         },
         provide<T>(f: () => T): T {
-            currentScope = scope;
-            const res = f();
+            currentScope = this.scope;
+            const service = f();
             currentScope = undefined;
-            return res;
+            return service;
         }
     }
 }
