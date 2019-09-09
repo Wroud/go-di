@@ -1,7 +1,7 @@
-type ServiceFunction<T, TFunc extends Function> = (service: T | undefined) => TFunc;
+type ServiceFunction<T, TFunc> = (service: T | undefined) => TFunc;
 interface IService<T> {
     (): T | undefined;
-    <TFunc extends Function>(
+    <TFunc>(
         f: ServiceFunction<T, TFunc>
     ): TFunc;
 }
@@ -9,7 +9,7 @@ interface IService<T> {
 let currentScope: WeakMap<Function, any> | undefined;
 
 export function createService<T>(): IService<T> {
-    function service<TFunc extends Function>(
+    function service<TFunc>(
         f?: ServiceFunction<T, TFunc>
     ): TFunc | T | undefined {
         const scope = getScope<T>();

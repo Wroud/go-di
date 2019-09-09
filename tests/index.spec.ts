@@ -24,11 +24,17 @@ describe('createService', () => {
         expect(scope.provide(() => serviceB())).to.be.equal(testBValue);
     })
 
-    it('provides', () => {
+    it('currying', () => {
         scope
             .attach(serviceA, testAValue)
             .attach(serviceB, testBValue);
 
-        expect(scope.provide(() => (serviceA() || 0) + (serviceB() || 0))).to.be.equal(testAValue + testBValue);
+        expect(scope.provide(() =>
+            serviceA((a = 0) =>
+                serviceB((b = 0) => a + b)
+            )
+        )).to.be.equal(testAValue + testBValue);
     })
+
+
 })
