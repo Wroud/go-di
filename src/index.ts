@@ -35,9 +35,10 @@ export function createScope(): IScope {
             return this;
         },
         provide<T>(f: () => T): T {
+            const saveScope = currentScope;
             currentScope = this.scope;
             const service = f();
-            currentScope = undefined;
+            currentScope = saveScope;
             return service;
         }
     }

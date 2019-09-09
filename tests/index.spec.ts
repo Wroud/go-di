@@ -52,6 +52,20 @@ describe('createService', () => {
         )).to.be.equal(testBValue + testCValue);
     })
 
+    it('restores scope', () => {
+        scope
+            .attach(serviceB, testBValue);
+
+        scopeSecond
+            .attach(serviceA, testCValue);
+
+        expect(scope.provide(() =>
+            scopeSecond.provide(() => serviceA((b = 0) => b))
+            +
+            serviceB((a = 0) => a)
+        )).to.be.equal(testBValue + testCValue);
+    })
+
     it('throw without scope', () => {
         scope.provide(() => { });
         expect(() => serviceA()).to.throw();
