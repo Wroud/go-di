@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-      "outDir": "./build",
+      "outDir": "./lib",
       "baseUrl": "./src",
       "module": "commonjs",
       "moduleResolution": "node",
@@ -28,7 +28,7 @@
     "exclude": [
       "tests",
       "bin",
-      "build",
+      "lib",
       "node_modules",
       "examples",
       "bench"

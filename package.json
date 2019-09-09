@@ -1,15 +1,34 @@
 {
   "name": "go-di",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Dependency injection",
-  "main": "build/index.js",
+  "main": "lib/index.js",
+  "module": "lib/index.js",
+  "typings": "lib/index.d.ts",
+  "files": [
+    "src",
+    "lib",
+    "lib/index.d.ts"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "mocha --opts mocha.opts && npm run size",
-    "size": "size-limit"
+    "size": "size-limit",
+    "publish:beta": "npm run build & npm publish -tag beta",
+    "publish:alpha": "npm run build & npm publish -tag alpha",
+    "publish:rc": "npm run build & npm publish -tag rc",
+    "publish:latest": "npm run build & npm publish"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Wroud/go-di.git"
+  },
+  "release": {
+    "branch": "master"
   },
   "keywords": [
-    "di"
+    "di",
+    "typescript"
   ],
   "author": "Wroud",
   "license": "MIT",

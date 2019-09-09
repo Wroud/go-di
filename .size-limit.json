@@ -1,6 +1,6 @@
 [
-    {
-        "limit": "200 B",
-        "path": "build/index.js"
-    }
+  {
+    "path": "lib/index.js",
+    "limit": "200 B"
+  }
 ]
