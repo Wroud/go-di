@@ -7,8 +7,10 @@ describe('createService', () => {
     const serviceA = createService<number>();
     const serviceB = createService<number>();
     const scope = createScope();
+    const scopeSecond = createScope();
     const testAValue: number = 1;
     const testBValue: number = 2;
+    const testCValue: number = 3;
 
     it('function', () => {
         expect(typeof serviceA).to.be.equal('function');
@@ -34,6 +36,20 @@ describe('createService', () => {
                 serviceB((b = 0) => a + b)
             )
         )).to.be.equal(testAValue + testBValue);
+    })
+
+    it('multiple scopes', () => {
+        scope
+            .attach(serviceB, testBValue);
+
+        scopeSecond
+            .attach(serviceA, testCValue);
+
+        expect(scope.provide(() =>
+            serviceB((a = 0) =>
+                scopeSecond.provide(() => serviceA((b = 0) => a + b))
+            )
+        )).to.be.equal(testBValue + testCValue);
     })
 
     it('throw without scope', () => {
