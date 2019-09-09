@@ -12,10 +12,9 @@ export function createService<T>(): IService<T> {
     function service<TFunc>(
         f?: ServiceFunction<T, TFunc>
     ): TFunc | T | undefined {
-        const scope = getScope<T>();
         let serviceValue: T | undefined;
-        if (scope && scope.has(service)) {
-            serviceValue = scope.get(service);
+        if (currentScope && currentScope.has(service)) {
+            serviceValue = currentScope.get(service);
         }
         return f
             ? f(serviceValue)
@@ -36,8 +35,4 @@ export function createScope() {
             return f();
         }
     }
-}
-
-function getScope<T>(): WeakMap<Function, T> | undefined {
-    return currentScope;
 }
