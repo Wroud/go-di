@@ -12,10 +12,10 @@ export function createService<T>(): IService<T> {
     function service<TFunc>(
         f?: ServiceFunction<T, TFunc>
     ): TFunc | T | undefined {
-        let serviceValue: T | undefined;
-        if (currentScope && currentScope.has(service)) {
-            serviceValue = currentScope.get(service);
+        if (!currentScope) {
+            throw new Error('No scope provided. Use scope(() => service())');
         }
+        let serviceValue: T | undefined = currentScope.get(service);
         return f
             ? f(serviceValue)
             : serviceValue;
@@ -32,7 +32,9 @@ export function createScope() {
         },
         provide<T>(f: () => T): T {
             currentScope = scope;
-            return f();
+            const res = f();
+            currentScope = undefined;
+            return res;
         }
     }
 }

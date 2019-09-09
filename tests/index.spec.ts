@@ -36,5 +36,8 @@ describe('createService', () => {
         )).to.be.equal(testAValue + testBValue);
     })
 
-
+    it('throw without scope', () => {
+        scope.provide(() => { });
+        expect(() => serviceA()).to.throw();
+    })
 })
