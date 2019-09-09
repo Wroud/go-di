@@ -1,13 +1,17 @@
-const callerMark = Symbol();
+type ServiceFunction<T, TFunc extends Function> = (service: T | undefined) => TFunc;
+interface IService<T> {
+    (): T | undefined;
+    <TFunc extends Function>(
+        f: ServiceFunction<T, TFunc>
+    ): TFunc;
+}
 
-export function createService<T>() {
-    function service(): T | undefined;
-    function service<TArgs extends any[], U>(
-        f: (service: T | undefined) => (...args: TArgs) => U
-    ): ((...args: TArgs) => U);
-    function service<TArgs extends any[], U>(
-        f?: (service: T | undefined) => (...args: TArgs) => U
-    ): ((...args: TArgs) => U) | T | undefined {
+let currentScope: WeakMap<Function, any> | undefined;
+
+export function createService<T>(): IService<T> {
+    function service<TFunc extends Function>(
+        f?: ServiceFunction<T, TFunc>
+    ): TFunc | T | undefined {
         const scope = getScope<T>();
         let serviceValue: T | undefined;
         if (scope && scope.has(service)) {
@@ -20,25 +24,20 @@ export function createService<T>() {
     return service;
 }
 
-export function attachService<T>(service: () => T | undefined, value: T) {
-    const scope = getScope<T>();
-    if (scope) {
-        scope.set(service, value);
-    }
-}
-
-export function createScope(f: () => void) {
-    f[callerMark] = new WeakMap();
-    f();
-}
-
-function getScope<T>(): WeakMap<Function, T> | null {
-    let caller: Function | null = null;
-    while (true) {
-        caller = getScope.caller;
-        if (caller == null || caller[callerMark]) {
-            break;
+export function createScope() {
+    const scope = new WeakMap();
+    return {
+        attach<T>(service: IService<T>, value: T) {
+            scope.set(service, value);
+            return this;
+        },
+        provide<T>(f: () => T): T {
+            currentScope = scope;
+            return f();
         }
     }
-    return caller ? caller[callerMark] : null;
+}
+
+function getScope<T>(): WeakMap<Function, T> | undefined {
+    return currentScope;
 }
