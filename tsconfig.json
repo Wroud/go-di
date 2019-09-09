@@ -28,7 +28,7 @@
     "exclude": [
       "tests",
       "bin",
-      "lib",
+      "build",
       "node_modules",
       "examples",
       "bench"

@@ -1,0 +1,6 @@
+[
+    {
+        "limit": "200 B",
+        "path": "build/index.js"
+    }
+]
