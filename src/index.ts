@@ -7,7 +7,7 @@ type WithScope<T> = [T & IAttachedScope, IScope];
 type ServiceFunction<T, TFunc> = (service: T | undefined) => TFunc;
 interface IService<T> {
     (): T | undefined;
-    <TScope extends IAttachedScope>(f: IAttachedScope): T | undefined;
+    (f: IAttachedScope): T | undefined;
     <TFunc>(
         f: ServiceFunction<T, TFunc>
     ): TFunc;
@@ -91,12 +91,3 @@ function getService<T>(service: IService<T>): T | undefined {
     }
     return undefined;
 }
-
-// const [store, scope] = withScope(createStore());
-// const service = createService();
-
-// scope.attach(service, 1);
-
-// console.log(service(store)) // 1
-// console.log(service(scope)) // 1
-// console.log(scope.provide(() => service())) // 1
