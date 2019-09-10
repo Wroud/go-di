@@ -23,6 +23,22 @@ console.log(scope.provide(() => service()));
 // 1
 ```
 
+### withScope
+```js
+import { createService, withScope } from "go-di";
+
+const objToAttach = {};
+const [obj, scope] = withScope(objToAttach);
+const service = createService();
+
+scope.attach(service, 1);
+
+console.log(service(obj));
+// 1
+console.log(service(scope));
+// 1
+```
+
 ### Full
 ```js
 import { createService, createScope } from "go-di";

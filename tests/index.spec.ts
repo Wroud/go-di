@@ -1,23 +1,24 @@
 import { expect } from "chai";
 import "mocha";
 
-import { createService, createScope } from "../src/";
+import { createService, createScope, withScope } from "../src/";
 
 describe('createService', () => {
-    const serviceA = createService<number>();
-    const serviceB = createService<number>();
-    const scope = createScope();
-    const scopeSecond = createScope();
     const testAValue: number = 1;
     const testBValue: number = 2;
     const testCValue: number = 3;
 
     it('function', () => {
+        const serviceA = createService<number>();
+        const serviceB = createService<number>();
         expect(typeof serviceA).to.be.equal('function');
         expect(typeof serviceB).to.be.equal('function');
     })
 
     it('attaches', () => {
+        const serviceA = createService<number>();
+        const serviceB = createService<number>();
+        const scope = createScope();
         scope
             .attach(serviceA, testAValue)
             .attach(serviceB, testBValue);
@@ -27,6 +28,9 @@ describe('createService', () => {
     })
 
     it('currying', () => {
+        const serviceA = createService<number>();
+        const serviceB = createService<number>();
+        const scope = createScope();
         scope
             .attach(serviceA, testAValue)
             .attach(serviceB, testBValue);
@@ -39,6 +43,10 @@ describe('createService', () => {
     })
 
     it('multiple scopes', () => {
+        const serviceA = createService<number>();
+        const serviceB = createService<number>();
+        const scope = createScope();
+        const scopeSecond = createScope();
         scope
             .attach(serviceB, testBValue);
 
@@ -53,6 +61,10 @@ describe('createService', () => {
     })
 
     it('restores scope', () => {
+        const serviceA = createService<number>();
+        const serviceB = createService<number>();
+        const scope = createScope();
+        const scopeSecond = createScope();
         scope
             .attach(serviceB, testBValue);
 
@@ -67,6 +79,10 @@ describe('createService', () => {
     })
 
     it('scope inheritance', () => {
+        const serviceA = createService<number>();
+        const serviceB = createService<number>();
+        const scope = createScope();
+        const scopeSecond = createScope();
         scope
             .attach(serviceB, testBValue)
             .attach(serviceA, undefined);
@@ -79,7 +95,22 @@ describe('createService', () => {
         )).to.be.equal(testBValue + testCValue);
     })
 
+    it('with scope', () => {
+        const [obj, objScope] = withScope({});
+        const serviceA = createService<number>();
+        const serviceB = createService<number>();
+
+        objScope
+            .attach(serviceA, testAValue)
+            .attach(serviceB, testBValue);
+
+        expect(serviceA(obj)).to.be.equal(testAValue);
+        expect(serviceB(obj)).to.be.equal(testBValue);
+    })
+
     it('throw without scope', () => {
+        const serviceA = createService<number>();
+        const scope = createScope();
         scope.provide(() => { });
         expect(() => serviceA()).to.throw();
     })
