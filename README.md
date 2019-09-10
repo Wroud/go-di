@@ -2,8 +2,9 @@
 
 [![GitHub issues](https://img.shields.io/github/issues/Wroud/go-di.svg)](https://github.com/Wroud/go-di/issues)
 [![GitHub license](https://img.shields.io/github/license/Wroud/go-di.svg)](https://github.com/Wroud/go-di/blob/master/LICENSE)
-[![npm version](https://img.shields.io/npm/v/go-di.svg?style=flat-square)](https://www.npmjs.com/package/go-di)
-[![npm downloads](https://img.shields.io/npm/dm/go-di.svg?style=flat-square)](https://www.npmjs.com/package/go-di)
+[![npm bundle size](https://img.shields.io/bundlephobia/minzip/go-di)](https://bundlephobia.com/result?p=go-di)
+[![npm version](https://img.shields.io/npm/v/go-di.svg)](https://www.npmjs.com/package/go-di)
+[![npm downloads](https://img.shields.io/npm/dm/go-di.svg)](https://www.npmjs.com/package/go-di)
 
 ## Install
 ```
