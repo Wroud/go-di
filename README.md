@@ -19,7 +19,7 @@ const service = createService();
 const scope = createScope()
   .attach(service, 1);
 
-console.log(scope.provide(() => service()));
+console.log(service(scope));
 // 1
 ```
 
