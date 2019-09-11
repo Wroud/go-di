@@ -14,9 +14,9 @@ npm i go-di
 ## Usage
 ### Simple
 ```js
-import { createService, createScope } from "go-di";
+import { createIService, createScope } from "go-di";
 
-const service = createService();
+const service = createIService();
 const scope = createScope()
   .attach(service, 1);
 
@@ -44,8 +44,8 @@ console.log(service(scope));
 ```js
 import { createService, createScope } from "go-di";
 
-const serviceA = createService<number>();
-const serviceB = createService<number>();
+const serviceA = createIService<number>();
+const serviceB = createIService<number>();
 
 const scopeFirst = createScope();
 const scopeSecond = createScope();
