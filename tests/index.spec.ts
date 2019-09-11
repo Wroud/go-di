@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 
-import { createService, createScope, withScope } from "../src/";
+import { createIService as createService, createService as createWService, createScope, withScope } from "../src/";
 
 describe('createService', () => {
     const testAValue: number = 1;
@@ -25,6 +25,25 @@ describe('createService', () => {
 
         expect(scope.provide(() => serviceA())).to.be.equal(testAValue);
         expect(scope.provide(() => serviceB())).to.be.equal(testBValue);
+    })
+
+    it('detaches', () => {
+        const serviceA = createService<number>();
+        const serviceB = createService<number>();
+        const scope = createScope();
+        scope
+            .attach(serviceA, testAValue)
+            .attach(serviceB, testBValue);
+
+        expect(scope.provide(() => serviceA())).to.be.equal(testAValue);
+        expect(scope.provide(() => serviceB())).to.be.equal(testBValue);
+
+        scope
+            .detach(serviceA)
+            .detach(serviceB);
+
+        expect(serviceA(scope)).to.be.equal(undefined);
+        expect(serviceB(scope)).to.be.equal(undefined);
     })
 
     it('currying', () => {
@@ -97,8 +116,8 @@ describe('createService', () => {
 
     it('with scope', () => {
         const [obj, objScope] = withScope({});
-        const serviceA = createService<number>();
-        const serviceB = createService<number>();
+        const serviceA = createWService<number>();
+        const serviceB = createWService<number>();
 
         objScope
             .attach(serviceA, testAValue)
