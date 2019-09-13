@@ -42,7 +42,7 @@ console.log(service(scope));
 
 ### Full
 ```js
-import { createService, createScope } from "go-di";
+import { createIService, createScope } from "go-di";
 
 const serviceA = createIService<number>();
 const serviceB = createIService<number>();
