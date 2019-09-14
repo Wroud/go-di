@@ -1,6 +1,7 @@
 [
   {
     "path": "lib/index.js",
-    "limit": "500 B"
+    "limit": "500 B",
+    "webpack": false
   }
 ]
