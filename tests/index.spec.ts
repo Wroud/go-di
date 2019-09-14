@@ -115,16 +115,37 @@ describe('createService', () => {
     })
 
     it('with scope', () => {
-        const [obj, objScope] = withScope({});
+        interface IStore { }
+        const [obj, objScope] = withScope({} as IStore);
         const serviceA = createWService<number>();
         const serviceB = createWService<number>();
+        const arg0 = 5;
+        const arg1 = "hello"
+        const fnc = (a: number, b: number, c: number, d: string) => (a + b + c) + d;
 
         objScope
             .attach(serviceA, testAValue)
             .attach(serviceB, testBValue);
 
+        function caller<T>(
+            f: (arg: typeof obj, othern: number, argt: string) => T,
+            othern: number,
+            argt: string
+        ): T {
+            return f(obj, othern, argt);
+        }
+
         expect(serviceA(obj)).to.be.equal(testAValue);
         expect(serviceB(obj)).to.be.equal(testBValue);
+        expect(caller(
+            serviceB((b = 0) =>
+                serviceA((a = 0) =>
+                    (ps, arg0, arg1) => fnc(a, b, arg0, arg1)
+                )
+            ),
+            arg0,
+            arg1
+        )).to.be.equal(fnc(testAValue, testBValue, arg0, arg1));
     })
 
     it('throw without scope', () => {

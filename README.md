@@ -30,14 +30,27 @@ import { createService, withScope } from "go-di";
 
 const objToAttach = {};
 const [obj, scope] = withScope(objToAttach);
-const service = createService();
+const serviceA = createService();
+const serviceB = createService();
 
-scope.attach(service, 1);
+scope.attach(serviceA, 1);
+scope.attach(serviceB, 2);
 
-console.log(service(obj));
+console.log(serviceA(obj));
 // 1
-console.log(service(scope));
+console.log(serviceA(scope));
 // 1
+
+serviceA(a => 
+  serviceB(b => 
+    (obj, c, d) => (obj.field = a + b + c + d)
+  )
+)(obj, 3, 4);
+// obj.field = a + b + c + d
+// obj.field = 1 + 2 + 3 + 4
+
+console.log(obj.field)
+// 10
 ```
 
 ### Full
