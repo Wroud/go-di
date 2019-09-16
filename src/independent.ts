@@ -1,6 +1,6 @@
 import { IScope, Scope, IService, isScope } from "./scope";
 
-let currentScope: Array<Map<IService<any>, any>> = [];
+let currentScope: Array<IndependentScope> = [];
 
 export interface IIndependentScope extends IScope {
     provide<T>(f: () => T): T;
@@ -8,7 +8,7 @@ export interface IIndependentScope extends IScope {
 
 class IndependentScope extends Scope implements IIndependentScope {
     provide<T>(f: () => T): T {
-        currentScope.unshift(this.scope);
+        currentScope.unshift(this);
         const service = f();
         currentScope.shift();
         return service;
@@ -18,9 +18,9 @@ class IndependentScope extends Scope implements IIndependentScope {
 export function createScope(): IIndependentScope {
     return new IndependentScope();
 }
-type ServiceFunction<T, TFunc> = (service: T | undefined) => TFunc;
+type ServiceFunction<T, TFunc> = (service: T) => TFunc;
 interface IScopeService<T> extends IService<T> {
-    (): T | undefined;
+    (): T;
     <TFunc>(
         f: ServiceFunction<T, TFunc>
     ): TFunc;
@@ -29,7 +29,7 @@ interface IScopeService<T> extends IService<T> {
 export function createIService<T>(): IScopeService<T> {
     return function service<TFunc>(
         f?: ServiceFunction<T, TFunc> | IScope
-    ): TFunc | T | undefined {
+    ): TFunc | T {
         if (!f) {
             return getService<T>(service as IService<T>);
         }
@@ -40,15 +40,15 @@ export function createIService<T>(): IScopeService<T> {
     }
 }
 
-export function getService<T>(service: IService<T>): T | undefined {
+export function getService<T>(service: IService<T>): T {
     if (currentScope.length == 0) {
         throw new Error('No scope provided. Use scope(() => service())');
     }
     for (const list of currentScope) {
-        const find = list.get(service);
-        if (find != undefined) {
-            return find;
+        if (list.has(service)) {
+            return list.get(service);
         }
     }
-    return undefined;
+    throw new Error(`Service not found`);
+
 }

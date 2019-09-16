@@ -42,8 +42,8 @@ describe('createService', () => {
             .detach(serviceA)
             .detach(serviceB);
 
-        expect(serviceA(scope)).to.be.equal(undefined);
-        expect(serviceB(scope)).to.be.equal(undefined);
+        expect(() => serviceA(scope)).to.throw(Error, 'Service not found');
+        expect(() => serviceB(scope)).to.throw(Error, 'Service not found');
     })
 
     it('currying', () => {
@@ -55,8 +55,8 @@ describe('createService', () => {
             .attach(serviceB, testBValue);
 
         expect(scope.provide(() =>
-            serviceA((a = 0) =>
-                serviceB((b = 0) => a + b)
+            serviceA(a =>
+                serviceB(b => a + b)
             )
         )).to.be.equal(testAValue + testBValue);
     })
@@ -73,8 +73,8 @@ describe('createService', () => {
             .attach(serviceA, testCValue);
 
         expect(scope.provide(() =>
-            serviceB((a = 0) =>
-                scopeSecond.provide(() => serviceA((b = 0) => a + b))
+            serviceB(a =>
+                scopeSecond.provide(() => serviceA(b => a + b))
             )
         )).to.be.equal(testBValue + testCValue);
     })
@@ -91,9 +91,9 @@ describe('createService', () => {
             .attach(serviceA, testCValue);
 
         expect(scope.provide(() =>
-            scopeSecond.provide(() => serviceA((b = 0) => b))
+            scopeSecond.provide(() => serviceA(b => b))
             +
-            serviceB((a = 0) => a)
+            serviceB(a => a)
         )).to.be.equal(testBValue + testCValue);
     })
 
@@ -103,14 +103,13 @@ describe('createService', () => {
         const scope = createScope();
         const scopeSecond = createScope();
         scope
-            .attach(serviceB, testBValue)
-            .attach(serviceA, undefined);
+            .attach(serviceB, testBValue);
 
         scopeSecond
             .attach(serviceA, testCValue);
 
         expect(scopeSecond.provide(() =>
-            scope.provide(() => serviceA((b = 0) => b) + serviceB((a = 0) => a))
+            scope.provide(() => serviceA(b => b) + serviceB(a => a))
         )).to.be.equal(testBValue + testCValue);
     })
 
@@ -146,6 +145,45 @@ describe('createService', () => {
             arg0,
             arg1
         )).to.be.equal(fnc(testAValue, testBValue, arg0, arg1));
+    })
+
+    it('factory withScope', () => {
+        interface IStore { }
+        const [obj, objScope] = withScope({} as IStore);
+        const serviceA = createWService<number>();
+        const serviceB = createWService<number>();
+        const serviceC = createWService<number>();
+        const arg0 = 5;
+        const arg1 = "hello"
+        const fnc = (a: number, b: number, c: number, d: string, e: number) => (a + b + c + e) + d;
+
+        objScope
+            .attach(serviceA, testAValue)
+            .attach(serviceB, testBValue)
+            .attachFactory(serviceC, scope => serviceA(scope) + serviceB(scope));
+
+        function caller<T>(
+            f: (arg: typeof obj, othern: number, argt: string) => T,
+            othern: number,
+            argt: string
+        ): T {
+            return f(obj, othern, argt);
+        }
+
+        expect(serviceA(obj)).to.be.equal(testAValue);
+        expect(serviceB(obj)).to.be.equal(testBValue);
+        expect(serviceC(obj)).to.be.equal(testAValue + testBValue);
+        expect(caller(
+            serviceB(b =>
+                serviceA(a =>
+                    serviceC(c =>
+                        (ps, arg0, arg1) => fnc(a, b, arg0, arg1, c)
+                    )
+                )
+            ),
+            arg0,
+            arg1
+        )).to.be.equal(fnc(testAValue, testBValue, arg0, arg1, testAValue + testBValue));
     })
 
     it('throw without scope', () => {
