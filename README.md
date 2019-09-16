@@ -53,6 +53,40 @@ console.log(obj.field)
 // 10
 ```
 
+### attachFactory
+```js
+import { createService, withScope } from "go-di";
+
+const objToAttach = {};
+const [obj, scope] = withScope(objToAttach);
+const serviceA = createService();
+const serviceB = createService();
+const serviceC = createService();
+
+function myFactory(scope){
+  return serviceA(scope) + serviceB(scope);
+}
+
+scope.attach(serviceA, 1);
+scope.attach(serviceB, 2);
+scope.attachFactory(serviceC, myFactory);
+
+console.log(serviceC(scope));
+// 3
+
+serviceA(a => 
+  serviceB(b => 
+    serviceC(c =>
+      (obj, e, d) => (obj.field = a + b + c + d + e)
+  )
+)(obj, 3, 4);
+// obj.field = a + b + c + d + e
+// obj.field = 1 + 2 + 3 + 4 + 3
+
+console.log(obj.field)
+// 13
+```
+
 ### Full
 ```js
 import { createIService, createScope } from "go-di";
