@@ -137,8 +137,8 @@ describe('createService', () => {
         expect(serviceA(obj)).to.be.equal(testAValue);
         expect(serviceB(obj)).to.be.equal(testBValue);
         expect(caller(
-            serviceB((b = 0) =>
-                serviceA((a = 0) =>
+            serviceB(b =>
+                serviceA(a =>
                     (ps, arg0, arg1) => fnc(a, b, arg0, arg1)
                 )
             ),

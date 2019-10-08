@@ -19,14 +19,14 @@ export function createScope(): IIndependentScope {
     return new IndependentScope();
 }
 type ServiceFunction<T, TFunc> = (service: T) => TFunc;
-interface IScopeService<T> extends IService<T> {
+export interface IScopeIService<T> extends IService<T> {
     (): T;
     <TFunc>(
         f: ServiceFunction<T, TFunc>
     ): TFunc;
 }
 
-export function createIService<T>(): IScopeService<T> {
+export function createIService<T>(): IScopeIService<T> {
     return function service<TFunc>(
         f?: ServiceFunction<T, TFunc> | IScope
     ): TFunc | T {

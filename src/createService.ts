@@ -7,7 +7,7 @@ type ProviderFunc<TArgs extends any[], TResult, TProvider extends IWithScope | I
 type Provider<T, TArgs extends any[], TResult, TProvider extends IWithScope | IScope> =
     (service: T) => ProviderFunc<TArgs, TResult, TProvider>;
 
-interface IScopeService<T> extends IService<T> {
+export interface IScopeService<T> extends IService<T> {
     (f: IWithScope | IScope): T;
     <TArgs extends any[], TResult, TProvider extends IWithScope | IScope>(
         provider: Provider<T, TArgs, TResult, TProvider>
