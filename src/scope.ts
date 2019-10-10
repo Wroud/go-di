@@ -2,14 +2,26 @@ export interface IService<T> {
   (f: IScope): T;
 }
 
+export enum ServiceType {
+  Transient,
+  Scoped,
+  Singleton
+}
+
 export interface IServiceValue<T> {
   service: T | ((f: IScope) => T) | (() => T);
+  type: ServiceType;
   isFactory: boolean;
+  value?: T;
 }
 
 export interface IScope {
   scope: Map<IService<any>, IServiceValue<any>>;
-  attachFactory<T>(service: IService<T>, value: (scope: IScope) => T): IScope;
+  attachFactory<T>(
+    service: IService<T>,
+    value: (scope: IScope) => T,
+    isSingleton?: boolean
+  ): IScope;
   attach<T>(service: IService<T>, value: T): IScope;
   detach<T>(service: IService<T>): IScope;
   get<T>(service: IService<T>): T;
@@ -21,12 +33,21 @@ export class Scope implements IScope {
   constructor() {
     this.scope = new Map();
   }
-  attachFactory<T>(service: IService<T>, value: (scope: IScope) => T) {
-    this.scope.set(service, { service: value, isFactory: true });
+  attachFactory<T>(
+    service: IService<T>,
+    value: (scope: IScope) => T,
+    isSingleton?: boolean
+  ) {
+    this._attach(
+      service,
+      value,
+      isSingleton ? ServiceType.Singleton : ServiceType.Transient,
+      true
+    );
     return this;
   }
   attach<T>(service: IService<T>, value: T) {
-    this.scope.set(service, { service: value, isFactory: false });
+    this._attach(service, value, ServiceType.Transient, false);
     return this;
   }
   detach<T>(service: IService<T>) {
@@ -38,10 +59,27 @@ export class Scope implements IScope {
     if (_service === undefined) {
       throw new Error(`Service not found`);
     }
-    return _service.isFactory ? _service.service(this) : _service.service;
+    if (!_service.value || _service.type === ServiceType.Transient) {
+      _service.value = _service.isFactory
+        ? _service.service(this)
+        : _service.service;
+    }
+    return _service.value;
   }
   has(service: IService<any>): boolean {
     return this.scope.has(service);
+  }
+  private _attach<T>(
+    service: IService<T>,
+    value: T | ((scope: IScope) => T),
+    type: ServiceType,
+    isFactory: boolean
+  ) {
+    this.scope.set(service, {
+      service: value,
+      type,
+      isFactory
+    });
   }
 }
 

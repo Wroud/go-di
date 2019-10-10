@@ -87,6 +87,34 @@ console.log(obj.field)
 // 13
 ```
 
+### attachFactory Signleton
+```js
+import { createService, withScope } from "go-di";
+
+const objToAttach = {};
+const [obj, scope] = withScope(objToAttach);
+const serviceA = createService();
+const serviceB = createService();
+const serviceC = createService();
+
+function myFactory(scope) {
+  console.log("myFactory initialized")
+  return serviceA(scope) + serviceB(scope);
+}
+
+scope.attach(serviceA, 1);
+scope.attach(serviceB, 2);
+scope.attachFactory(serviceC, myFactory, true); // here true is flag thats we use for Singleton
+
+console.log(serviceC(scope));
+// myFactory initialized
+// 3
+
+console.log(serviceC(scope));
+// 3
+/* Message "myFactory initialized" isn't print to console second time */
+```
+
 ### Full
 ```js
 import { createIService, createScope } from "go-di";
