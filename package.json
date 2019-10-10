@@ -1,6 +1,6 @@
 {
   "name": "go-di",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "Dependency injection",
   "main": "lib/index.js",
   "module": "lib/index.js",
