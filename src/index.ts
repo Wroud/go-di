@@ -4,6 +4,5 @@ export {
   IScopeIService,
   IIndependentScope
 } from "./independent";
-export { isScope, Scope, IScope, IService } from "./scope";
-export { isWithScope, withScope, IWithScope } from "./withScope";
+export { isWithScope, withScope, IWithScope, scopeSymbol } from "./withScope";
 export { createService, IScopeService } from "./createService";
