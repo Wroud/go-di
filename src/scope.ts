@@ -2,7 +2,7 @@ export interface IService<T> {
   (f: IScope): T;
 }
 
-export type Factory<T, TObject> = (scope: IScope, object: TObject) => T;
+export type Factory<T, TObject> = (scope: IScope<TObject>, object: TObject) => T;
 
 export enum ServiceType {
   Transient,
@@ -10,14 +10,14 @@ export enum ServiceType {
   Singleton
 }
 
-export interface IServiceValue<T, TObject = undefined> {
+export interface IServiceValue<T, TObject = any> {
   service: T | Factory<T, TObject> | (() => T);
   type: ServiceType;
   isFactory: boolean;
   value?: T;
 }
 
-export interface IScope<TObject = undefined> {
+export interface IScope<TObject = any> {
   object?: TObject;
   scope: Map<IService<any>, IServiceValue<any, TObject>>;
   attachFactory<T>(
@@ -31,7 +31,7 @@ export interface IScope<TObject = undefined> {
   has(service: IService<any>): boolean;
 }
 
-export class Scope<TObject = undefined> implements IScope<TObject> {
+export class Scope<TObject = any> implements IScope<TObject> {
   object?: TObject;
   scope: Map<IService<any>, IServiceValue<any, TObject>>;
   constructor(object?: TObject) {
