@@ -2,40 +2,45 @@ export interface IService<T> {
   (f: IScope): T;
 }
 
+export type Factory<T, TObject> = (scope: IScope, object: TObject) => T;
+
 export enum ServiceType {
   Transient,
   Scoped,
   Singleton
 }
 
-export interface IServiceValue<T> {
-  service: T | ((f: IScope) => T) | (() => T);
+export interface IServiceValue<T, TObject = undefined> {
+  service: T | Factory<T, TObject> | (() => T);
   type: ServiceType;
   isFactory: boolean;
   value?: T;
 }
 
-export interface IScope {
-  scope: Map<IService<any>, IServiceValue<any>>;
+export interface IScope<TObject = undefined> {
+  object?: TObject;
+  scope: Map<IService<any>, IServiceValue<any, TObject>>;
   attachFactory<T>(
     service: IService<T>,
-    value: (scope: IScope) => T,
+    value: Factory<T, TObject>,
     isSingleton?: boolean
-  ): IScope;
-  attach<T>(service: IService<T>, value: T): IScope;
-  detach<T>(service: IService<T>): IScope;
+  ): this;
+  attach<T>(service: IService<T>, value: T): this;
+  detach<T>(service: IService<T>): this;
   get<T>(service: IService<T>): T;
   has(service: IService<any>): boolean;
 }
 
-export class Scope implements IScope {
-  scope: Map<IService<any>, IServiceValue<any>>;
-  constructor() {
+export class Scope<TObject = undefined> implements IScope<TObject> {
+  object?: TObject;
+  scope: Map<IService<any>, IServiceValue<any, TObject>>;
+  constructor(object?: TObject) {
     this.scope = new Map();
+    this.object = object;
   }
   attachFactory<T>(
     service: IService<T>,
-    value: (scope: IScope) => T,
+    value: Factory<T, TObject>,
     isSingleton?: boolean
   ) {
     this._attach(
@@ -61,7 +66,7 @@ export class Scope implements IScope {
     }
     if (!_service.value || _service.type === ServiceType.Transient) {
       _service.value = _service.isFactory
-        ? _service.service(this)
+        ? _service.service(this, this.object)
         : _service.service;
     }
     return _service.value;
@@ -71,7 +76,7 @@ export class Scope implements IScope {
   }
   private _attach<T>(
     service: IService<T>,
-    value: T | ((scope: IScope) => T),
+    value: T | Factory<T, TObject>,
     type: ServiceType,
     isFactory: boolean
   ) {

@@ -148,7 +148,10 @@ describe("createService", () => {
     objScope
       .attach(serviceA, testAValue)
       .attach(serviceB, testBValue)
-      .attachFactory(serviceC, scope => serviceA(scope) + serviceB(scope));
+      .attachFactory(serviceC, (scope, _obj) => {
+        expect(_obj).to.be.equal(obj);
+        return serviceA(scope) + serviceB(scope);
+      });
 
     function caller<T>(
       f: (arg: typeof obj, othern: number, argt: string) => T,
@@ -200,10 +203,14 @@ describe("createService", () => {
     const serviceA = createService<number>();
     const scope = createScope();
     let i = 0;
-    scope.attachFactory(serviceA, () => {
-      i++;
-      return i;
-    }, true);
+    scope.attachFactory(
+      serviceA,
+      () => {
+        i++;
+        return i;
+      },
+      true
+    );
     expect(serviceA(scope)).to.be.equal(1);
     expect(serviceA(scope)).to.be.equal(1);
     expect(i).to.be.equal(1);
