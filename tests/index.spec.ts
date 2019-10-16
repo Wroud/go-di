@@ -5,7 +5,8 @@ import {
   createIService as createService,
   createService as createWService,
   createScope,
-  withScope
+  withScope,
+  IScope
 } from "../src/";
 
 describe("createService", () => {
@@ -18,6 +19,13 @@ describe("createService", () => {
     const serviceB = createService<number>();
     expect(typeof serviceA).to.be.equal("function");
     expect(typeof serviceB).to.be.equal("function");
+  });
+
+  it("factory has name", () => {
+    const serviceA = createService<number>("name1");
+    const serviceB = createWService<number>("name2");
+    expect(serviceA.name).to.be.equal("name1");
+    expect(serviceB.name).to.be.equal("name2");
   });
 
   it("attaches", () => {
@@ -139,19 +147,21 @@ describe("createService", () => {
     const [obj, objScope] = withScope({} as IStore);
     const serviceA = createWService<number>();
     const serviceB = createWService<number>();
-    const serviceC = createWService<number>();
+    const serviceC = createWService<typeof serviceCFunc>();
     const arg0 = 5;
     const arg1 = "hello";
     const fnc = (a: number, b: number, c: number, d: string, e: number) =>
       a + b + c + e + d;
 
+    function serviceCFunc(scope: IScope<IStore>, _obj: IStore) {
+      expect(_obj).to.be.equal(obj);
+      return serviceA(scope) + serviceB(scope);
+    }
+
     objScope
       .attach(serviceA, testAValue)
       .attach(serviceB, testBValue)
-      .attachFactory(serviceC, (scope, _obj) => {
-        expect(_obj).to.be.equal(obj);
-        return serviceA(scope) + serviceB(scope);
-      });
+      .attachFactory(serviceC, serviceCFunc);
 
     function caller<T>(
       f: (arg: typeof obj, othern: number, argt: string) => T,
@@ -214,5 +224,37 @@ describe("createService", () => {
     expect(serviceA(scope)).to.be.equal(1);
     expect(serviceA(scope)).to.be.equal(1);
     expect(i).to.be.equal(1);
+  });
+
+  describe("short call", () => {
+    it("withScope", () => {
+      interface IStore {}
+      const [obj, objScope] = withScope({} as IStore);
+      const serviceC = createWService<typeof serviceCFunc>();
+
+      function serviceCFunc(scope: IScope<IStore>, _obj: IStore, arg: string) {
+        return arg;
+      }
+
+      objScope.attachFactory(serviceC, serviceCFunc);
+
+      expect(serviceC(obj, "value")).to.be.equal("value");
+      expect(serviceC(v => () => v, "value")(obj)).to.be.equal("value");
+    });
+    it("independent", () => {
+      const scope = createScope();
+      const serviceC = createService<typeof serviceCFunc>();
+
+      function serviceCFunc(arg: string) {
+        return arg;
+      }
+
+      scope.attach(serviceC, serviceCFunc);
+
+      expect(scope.provide(() => serviceC(null, "value"))).to.be.equal("value");
+      expect(scope.provide(() => serviceC(v => v, "value"))).to.be.equal(
+        "value"
+      );
+    });
   });
 });

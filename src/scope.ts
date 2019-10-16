@@ -1,8 +1,26 @@
+export type GetParameters<T> = T extends Factory<any, any, infer Params>
+  ? Params
+  : T extends (...args: infer Params) => any
+  ? Params
+  : never;
+
+export type GetService<T> = T extends Factory<any, infer TValue, any>
+  ? TValue
+  : T;
+export type GetFunctionService<T> = T extends (...args: any) => infer R
+  ? R
+  : never;
+
 export interface IService<T> {
-  (f: IScope): T;
+  (f: IScope): GetService<T>;
+  (f: IScope, ...params: GetParameters<T>): GetFunctionService<T>;
 }
 
-export type Factory<T, TObject> = (scope: IScope<TObject>, object: TObject) => T;
+export type Factory<TObject, TValue, TParams extends any[]> = (
+  scope: IScope<TObject>,
+  object: TObject,
+  ...params: TParams
+) => TValue;
 
 export enum ServiceType {
   Transient,
@@ -11,7 +29,7 @@ export enum ServiceType {
 }
 
 export interface IServiceValue<T, TObject = any> {
-  service: T | Factory<T, TObject> | (() => T);
+  service: T | Factory<TObject, any, any> | ((...args: any) => T);
   type: ServiceType;
   isFactory: boolean;
   value?: T;
@@ -20,14 +38,18 @@ export interface IServiceValue<T, TObject = any> {
 export interface IScope<TObject = any> {
   object?: TObject;
   scope: Map<IService<any>, IServiceValue<any, TObject>>;
-  attachFactory<T>(
+  attachFactory<T extends Factory<TObject, any, any>>(
     service: IService<T>,
-    value: Factory<T, TObject>,
+    value: T,
     isSingleton?: boolean
   ): this;
   attach<T>(service: IService<T>, value: T): this;
   detach<T>(service: IService<T>): this;
   get<T>(service: IService<T>): T;
+  get<T extends (...args: any) => any>(
+    service: IService<T>,
+    params: GetParameters<T>
+  ): ReturnType<T>;
   has(service: IService<any>): boolean;
 }
 
@@ -38,9 +60,9 @@ export class Scope<TObject = any> implements IScope<TObject> {
     this.scope = new Map();
     this.object = object;
   }
-  attachFactory<T>(
+  attachFactory<T extends Factory<TObject, any, any>>(
     service: IService<T>,
-    value: Factory<T, TObject>,
+    value: T,
     isSingleton?: boolean
   ) {
     this._attach(
@@ -59,15 +81,28 @@ export class Scope<TObject = any> implements IScope<TObject> {
     this.scope.delete(service);
     return this;
   }
-  get<T>(service: IService<T>): T {
+  get<T>(service: IService<T>): T;
+  get<T extends (...args: any) => any>(
+    service: IService<T>,
+    params: GetParameters<T>
+  ): ReturnType<T>;
+  get<T>(service: IService<T>, params?: any[]): T {
     const _service = this.scope.get(service);
     if (_service === undefined) {
       throw new Error(`Service not found`);
     }
     if (!_service.value || _service.type === ServiceType.Transient) {
-      _service.value = _service.isFactory
-        ? _service.service(this, this.object)
-        : _service.service;
+      if (_service.isFactory) {
+        _service.value = _service.service(this, this.object, ...(params || []));
+      } else if (
+        typeof _service.service === "function" &&
+        params &&
+        params.length > 0
+      ) {
+        _service.value = _service.service(...params);
+      } else {
+        _service.value = _service.service;
+      }
     }
     return _service.value;
   }
@@ -76,7 +111,7 @@ export class Scope<TObject = any> implements IScope<TObject> {
   }
   private _attach<T>(
     service: IService<T>,
-    value: T | Factory<T, TObject>,
+    value: T,
     type: ServiceType,
     isFactory: boolean
   ) {
