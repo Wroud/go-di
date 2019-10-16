@@ -7,24 +7,39 @@
 [![npm downloads](https://img.shields.io/npm/dm/go-di.svg)](https://www.npmjs.com/package/go-di)
 
 ## Install
+
 ```
 npm i go-di
 ```
 
+## Supports
+
+- ## Service types
+  - Object
+  - Factory
+- ## Service lifetimes
+  - Singleton
+  - Transient
+- ## Misc
+  - Short call for functions
+  - Middleware for service initialization
+
 ## Usage
-### Simple
+
+### Independent
+
 ```js
 import { createIService, createScope } from "go-di";
 
 const service = createIService();
-const scope = createScope()
-  .attach(service, 1);
+const scope = createScope().attach(service, 1);
 
 console.log(service(scope));
 // 1
 ```
 
 ### withScope
+
 ```js
 import { createService, withScope } from "go-di";
 
@@ -41,19 +56,20 @@ console.log(serviceA(obj));
 console.log(serviceA(scope));
 // 1
 
-serviceA(a => 
-  serviceB(b => 
-    (obj, c, d) => (obj.field = a + b + c + d)
-  )
-)(obj, 3, 4);
+serviceA(a => serviceB(b => (obj, c, d) => (obj.field = a + b + c + d)))(
+  obj,
+  3,
+  4
+);
 // obj.field = a + b + c + d
 // obj.field = 1 + 2 + 3 + 4
 
-console.log(obj.field)
+console.log(obj.field);
 // 10
 ```
 
-### attachFactory
+### attachFactory Transient
+
 ```js
 import { createService, withScope } from "go-di";
 
@@ -74,8 +90,8 @@ scope.attachFactory(serviceC, myFactory);
 console.log(serviceC(scope));
 // 3
 
-serviceA(a => 
-  serviceB(b => 
+serviceA(a =>
+  serviceB(b =>
     serviceC(c =>
       (obj, e, d) => (obj.field = a + b + c + d + e)
   )
@@ -87,7 +103,8 @@ console.log(obj.field)
 // 13
 ```
 
-### attachFactory Signleton
+### attachFactory Singleton
+
 ```js
 import { createService, withScope } from "go-di";
 
@@ -98,7 +115,7 @@ const serviceB = createService();
 const serviceC = createService();
 
 function myFactory(scope) {
-  console.log("myFactory initialized")
+  console.log("myFactory initialized");
   return serviceA(scope) + serviceB(scope);
 }
 
@@ -115,7 +132,8 @@ console.log(serviceC(scope));
 /* Message "myFactory initialized" isn't print to console second time */
 ```
 
-### Full
+### Advanced
+
 ```js
 import { createIService, createScope } from "go-di";
 
@@ -130,8 +148,8 @@ scopeFirst
   .attach(serviceB, 2);
 
 console.log(scopeFirst.provide(() =>
-  serviceA((a = 0) =>
-    serviceB((b = 0) => a + b)
+  serviceA(a =>
+    serviceB(b => a + b)
 )));
 // 3
 
@@ -139,9 +157,38 @@ scopeSecond
   .attach(serviceB, 44);
 
 console.log(scopeFirst.provide(() =>
-  serviceA((a = 0) =>
-    scopeSecond.provide(() => serviceB((b = 0) => a + b))
+  serviceA(a =>
+    scopeSecond.provide(() => serviceB(b => a + b))
 )));
 // 45
 ```
 
+### useMiddleware
+```js
+const scope = createScope();
+
+const serviceA = createIService<number>('serviceA');
+const serviceB = createIService<number>('serviceB');
+const serviceС = createIService<typeof myService>();
+
+function myService(arg) {}
+
+scope
+  .useMiddleware((service, params, value) => {
+    const _value = value(service, params);
+    console.log(`${service.getName()}(${params}) => ${_value}`)
+    return _value;
+  })
+  .attach(serviceA, 1)
+  .attach(serviceB, 2)
+  .attach(serviceС, myService);
+
+serviceA(scope);
+// serviceA([]) => 1
+
+serviceB(scope);
+// serviceB([]) => 2
+
+serviceC(scope, "argument");
+// serviceC(["argument"]) => undefined
+```

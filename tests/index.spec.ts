@@ -21,11 +21,27 @@ describe("createService", () => {
     expect(typeof serviceB).to.be.equal("function");
   });
 
-  it("factory has name", () => {
+  it("service has name", () => {
     const serviceA = createService<number>("name1");
     const serviceB = createWService<number>("name2");
     expect(serviceA.name).to.be.equal("name1");
     expect(serviceB.name).to.be.equal("name2");
+  });
+
+  it("factory overrides name", () => {
+    const scope = createScope();
+    const serviceC = createService<typeof serviceCFunc>();
+
+    function serviceCFunc(scope: IScope, _obj: any) {}
+
+    scope
+      .attachFactory(serviceC, serviceCFunc)
+      .useMiddleware((service, params, value) => {
+        expect(service.getName()).to.be.equal("serviceCFunc");
+        return value(service, params);
+      });
+
+    scope.provide(() => serviceC(null));
   });
 
   it("attaches", () => {
@@ -251,10 +267,52 @@ describe("createService", () => {
 
       scope.attach(serviceC, serviceCFunc);
 
+      expect(serviceC(scope, "value")).to.be.equal("value");
+      expect(scope.provide(() => serviceC(v => v, "value"))).to.be.equal(
+        "value"
+      );
+    });
+  });
+
+  describe("middleware", () => {
+    it("independent", () => {
+      const scope = createScope();
+      const serviceC = createService<typeof serviceCFunc>();
+
+      function serviceCFunc(scope: IScope, _obj: any, arg: string) {
+        return arg;
+      }
+
+      scope
+        .attachFactory(serviceC, serviceCFunc)
+        .useMiddleware((service, params, value) => {
+          expect(params[0]).to.be.equal("value");
+          return value(service, params);
+        });
+
       expect(scope.provide(() => serviceC(null, "value"))).to.be.equal("value");
       expect(scope.provide(() => serviceC(v => v, "value"))).to.be.equal(
         "value"
       );
+    });
+    it("withScope", () => {
+      interface IStore {}
+      const [obj, objScope] = withScope({} as IStore);
+      const serviceC = createWService<typeof serviceCFunc>();
+
+      function serviceCFunc(scope: IScope<IStore>, _obj: IStore, arg: string) {
+        return arg;
+      }
+
+      objScope
+        .attachFactory(serviceC, serviceCFunc)
+        .useMiddleware((service, params, value) => {
+          expect(params[0]).to.be.equal("value");
+          return value(service, params);
+        });
+
+      expect(serviceC(obj, "value")).to.be.equal("value");
+      expect(serviceC(v => () => v, "value")(obj)).to.be.equal("value");
     });
   });
 });
