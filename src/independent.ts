@@ -24,10 +24,8 @@ export interface IScopeIService<T> extends IService<T> {
   <TFunc>(f: ServiceFunction<T, TFunc>): TFunc;
 }
 
-export function createIService<T>(): IScopeIService<T> {
-  return function service<TFunc>(
-    f?: ServiceFunction<T, TFunc> | IScope
-  ): TFunc | T {
+export function createIService<T>(name?: string): IScopeIService<T> {
+  function service<TFunc>(f?: ServiceFunction<T, TFunc> | IScope): TFunc | T {
     if (!f) {
       return getService<T>(service as IService<T>);
     }
@@ -35,7 +33,12 @@ export function createIService<T>(): IScopeIService<T> {
       return f.get(service as IService<T>);
     }
     return f(getService<T>(service as IService<T>));
-  };
+  }
+
+  if (name) {
+    Object.defineProperty(service, "name", { value: name });
+  }
+  return service;
 }
 
 export function getService<T>(service: IService<T>): T {

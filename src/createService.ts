@@ -21,7 +21,7 @@ export interface IScopeService<T> extends IService<T> {
   ): ProviderFunc<TArgs, TResult, TProvider>;
 }
 
-export function createService<T>(): IScopeService<T> {
+export function createService<T>(name?: string): IScopeService<T> {
   function service(f: IWithScope | IScope): T;
   function service<
     TArgs extends any[],
@@ -43,6 +43,9 @@ export function createService<T>(): IScopeService<T> {
     const scope: IScope = isWithScope(f) ? f[scopeSymbol] : f;
 
     return scope.get(service as IService<T>);
+  }
+  if (name) {
+    Object.defineProperty(service, "name", { value: name });
   }
   return service;
 }
