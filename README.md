@@ -190,5 +190,5 @@ serviceB(scope);
 // serviceB([]) => 2
 
 serviceC(scope, "argument");
-// serviceC(["argument"]) => undefined
+// myService(["argument"]) => undefined
 ```
