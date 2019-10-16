@@ -103,7 +103,7 @@ export class Scope<TObject = any> implements IScope<TObject> {
     return this;
   }
   attach<T>(service: IService<T>, value: T) {
-    this._attach(service, value, ServiceType.Transient, false);
+    this._attach(service, value, ServiceType.Singleton, false);
     return this;
   }
   detach<T>(service: IService<T>) {
