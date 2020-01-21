@@ -30,12 +30,14 @@ export type ObjectInjectProperty<TKey extends string | symbol, TService> = {
   [P in TKey]: GetService<TService>
 }
 
+export type DecoratorFunction<T> = <TKey extends string | symbol, TObject extends ObjectInjectProperty<TKey, T>>(
+  target: TObject,
+  propertyKey: TKey,
+  descriptor?: undefined
+) => void
+
 export interface IScopeService<T> extends IService<T> {
-  <TKey extends string | symbol, TObject extends ObjectInjectProperty<TKey, T>>(
-    target: TObject,
-    propertyKey: TKey,
-    descriptor?: undefined
-  ): void;
+  (): DecoratorFunction<T>;
 
   (f: IWithScope | IScope): GetService<T>;
   (f: IWithScope | IScope, ...params: GetParameters<T>): GetFunctionService<T>;
@@ -49,11 +51,7 @@ export interface IScopeService<T> extends IService<T> {
 }
 
 export function createService<T>(name?: string): IScopeService<T> {
-  function service<TKey extends string | symbol, TObject extends ObjectInjectProperty<TKey, T>>(
-    target: TObject,
-    propertyKey: TKey,
-    descriptor: undefined
-  ): void;
+  function service(): DecoratorFunction<T>;
   function service(f: IWithScope | IScope): GetService<T>;
   function service(
     f: IWithScope | IScope,
@@ -79,7 +77,7 @@ export function createService<T>(name?: string): IScopeService<T> {
     TResult,
     TProvider extends IWithScope | IScope
   >(
-    f:
+    f?:
       | IScope
       | IWithScope
       | Provider<GetService<T>, TArgs, TResult, TProvider>
@@ -87,27 +85,20 @@ export function createService<T>(name?: string): IScopeService<T> {
       | ObjectInjectProperty<string | symbol, T>,
     ...params: GetParameters<T> | [string | symbol, undefined]
   ):
-    | void
     | GetService<T>
+    | DecoratorFunction<T>
     | GetFunctionService<T>
     | ProviderFunc<TArgs, TResult, TProvider> {
-    if (
-      typeof f === 'object'
-      && params.length === 2
-      && ['string', 'symbol'].includes(typeof params[0])
-      && typeof params[1] === 'undefined'
-    ) {
-      if (!isArray(f[INJECTOR])) {
-        Object.defineProperty(f, INJECTOR, { value: [] });
-      }
-      f[INJECTOR].push([params[0], service]);
-      return;
-    }
     if (typeof f === 'function') {
-      return (fc, ...args) => f(service(fc, ...params as GetParameters<T>) as GetFunctionService<T> & GetService<T>)(
+      return (fc, ...args: any) => f(
+        service(fc, ...params as GetParameters<T>) as GetFunctionService<T> & GetService<T>,
+      )(
         fc,
         ...args,
       );
+    }
+    if (typeof f === 'undefined') {
+      return injector<T>(service);
     }
     const scope: IScope = isWithScope(f as IWithScope) ? f[scopeSymbol] : f;
 
@@ -116,5 +107,18 @@ export function createService<T>(name?: string): IScopeService<T> {
   if (name) {
     Object.defineProperty(service, 'name', { value: name });
   }
+
   return service;
+}
+
+function injector<T>(service: IScopeService<T>) {
+  return function decorator <TKey extends string | symbol, TObject extends ObjectInjectProperty<TKey, T>>(
+    target: TObject,
+    propertyKey: TKey,
+  ) {
+    if (!isArray(target[INJECTOR])) {
+      Object.defineProperty(target, INJECTOR, { value: [] });
+    }
+    target[INJECTOR].push([propertyKey, service]);
+  };
 }

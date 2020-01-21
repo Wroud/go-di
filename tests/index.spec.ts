@@ -311,16 +311,22 @@ describe('createService', () => {
 
 describe('Decorator', () => {
   it('function', () => {
-    const testValue = 1;
+    const testValue = [1, 23];
 
     class ServiceA {
-      a = testValue
+      a = 1
     }
     const serviceA = createWService<ServiceA>();
 
+    class ServiceC {
+      b = 23
+    }
+    const serviceC = createWService<ServiceC>();
+
     @injectable
     class ServiceB {
-      @serviceA a!: ServiceA;
+      @serviceA() a!: ServiceA;
+      @serviceC() c!: ServiceC;
     }
     const serviceB = createWService<ServiceB>();
     interface IStore {}
@@ -328,7 +334,8 @@ describe('Decorator', () => {
 
     objScope.attachClass(serviceA, ServiceA);
     objScope.attachClass(serviceB, ServiceB);
+    objScope.attachClass(serviceC, ServiceC);
 
-    expect(serviceB(obj).a.a).to.be.equal(testValue);
+    expect([serviceB(obj).a.a, serviceB(obj).c.b]).to.be.deep.equal(testValue);
   });
 });

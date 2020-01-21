@@ -45,7 +45,7 @@ const serviceA = createService<ServiceA>();
 
 @injectable
 class ServiceB {
-  @serviceA a!: ServiceA;
+  @serviceA() a!: ServiceA;
 }
 const serviceB = createService<ServiceB>();
 
