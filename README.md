@@ -41,13 +41,13 @@ const [obj, scope] = withScope(objToAttach);
 class ServiceA {
   a = 1
 }
-const serviceA = createWService<ServiceA>();
+const serviceA = createService<ServiceA>();
 
 @injectable
 class ServiceB {
   @serviceA a!: ServiceA;
 }
-const serviceB = createWService<ServiceB>();
+const serviceB = createService<ServiceB>();
 
 scope.attachClass(serviceA, ServiceA);
 scope.attachClass(serviceB, ServiceB);
