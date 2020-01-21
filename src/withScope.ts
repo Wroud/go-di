@@ -1,6 +1,6 @@
-import { IScope, Scope } from "./scope";
+import { IScope, Scope } from './scope';
 
-export const scopeSymbol = Symbol();
+export const scopeSymbol = Symbol('@go-di/scope');
 
 type WithScope<T> = [T & IWithScope<T>, IScope<T>];
 export interface IWithScope<T = any> {

@@ -12,7 +12,17 @@ export type GetFunctionService<T> = T extends (...args: any) => infer R
   ? R
   : never;
 
-export type Factory<TObject, TValue, TParams extends any[]> = (
+export type Factory<TObject, TValue, TParams extends any[]> =
+  FunctionConstructor<TObject, TValue, TParams>
+  | ClassConstructor<TObject, TValue, TParams>;
+
+export type FunctionConstructor<TObject, TValue, TParams extends any[]> = (
+  scope: IScope<TObject>,
+  object: TObject,
+  ...params: TParams
+) => TValue;
+
+export type ClassConstructor<TObject, TValue, TParams extends any[]> = new (
   scope: IScope<TObject>,
   object: TObject,
   ...params: TParams
@@ -41,10 +51,12 @@ export enum ServiceType {
   Singleton
 }
 
+export type ConstructorTypes = 'service' | 'factory' | 'class'
+
 export interface IServiceValue<T, TObject = any> {
   service: T | Factory<TObject, any, any> | ((...args: any) => T);
   type: ServiceType;
-  isFactory: boolean;
+  constructorType: ConstructorTypes;
   value?: GetService<T>;
   getName(): string;
 }
@@ -54,6 +66,11 @@ export interface IScope<TObject = any> {
   scope: Map<IService<any>, IServiceValue<any, TObject>>;
   middlewarePipe: IMiddleware<TObject>[];
   useMiddleware(middleware: IMiddleware<TObject>): this;
+  attachClass<T extends Factory<TObject, any, any>>(
+    service: IService<T>,
+    value: T,
+    isSingleton?: boolean
+  ): this;
   attachFactory<T extends Factory<TObject, any, any>>(
     service: IService<T>,
     value: T,
@@ -83,27 +100,40 @@ export class Scope<TObject = any> implements IScope<TObject> {
   useMiddleware(middleware: IMiddleware<TObject>) {
     if (this.isInitializationFinished) {
       throw new Error(
-        "You can add middleware only before any service was requested"
+        'You can add middleware only before any service was requested',
       );
     }
     this.middlewarePipe.push(middleware);
     return this;
   }
-  attachFactory<T extends Factory<TObject, any, any>>(
+  attachClass<T extends Factory<TObject, any, any>>(
     service: IService<T>,
     value: T,
-    isSingleton?: boolean
+    isSingleton?: boolean,
   ) {
     this._attach(
       service,
       value,
       isSingleton ? ServiceType.Singleton : ServiceType.Transient,
-      true
+      'class',
+    );
+    return this;
+  }
+  attachFactory<T extends Factory<TObject, any, any>>(
+    service: IService<T>,
+    value: T,
+    isSingleton?: boolean,
+  ) {
+    this._attach(
+      service,
+      value,
+      isSingleton ? ServiceType.Singleton : ServiceType.Transient,
+      'factory',
     );
     return this;
   }
   attach<T>(service: IService<T>, value: T) {
-    this._attach(service, value, ServiceType.Singleton, false);
+    this._attach(service, value, ServiceType.Singleton, 'service');
     return this;
   }
   detach<T>(service: IService<T>) {
@@ -121,42 +151,48 @@ export class Scope<TObject = any> implements IScope<TObject> {
     }
     const _service = this.scope.get(service);
     if (_service === undefined) {
-      throw new Error(`Service not found`);
+      throw new Error('Service not found');
     }
     const scope = this;
 
     function getDefaultValue<T>(
       service: IServiceValue<T, TObject>,
-      params: any[]
+      params: any[],
     ): GetService<T> {
       if (
-        service.value !== undefined &&
-        service.type !== ServiceType.Transient
+        service.value !== undefined
+        && service.type !== ServiceType.Transient
       ) {
         return service.value as GetService<T>;
       }
-      if (service.isFactory) {
-        return (service.service as Factory<TObject, GetService<T>, any[]>)(
-          scope,
-          scope.object as any,
-          ...params
-        );
+      switch (service.constructorType) {
+        case 'factory':
+          return (service.service as FunctionConstructor<TObject, GetService<T>, any[]>)(
+            scope,
+            scope.object as any,
+            ...params,
+          );
+        case 'class':
+          return new (service.service as ClassConstructor<TObject, GetService<T>, any[]>)(
+            scope,
+            scope.object as any,
+            ...params,
+          );
+        case 'service':
+          if (typeof service.service === 'function' && params.length > 0) {
+            return (service.service as (...args: any[]) => GetService<T>)(
+              ...params,
+            );
+          }
+          return service.service as GetService<T>;
       }
-      if (typeof service.service === "function" && params.length > 0) {
-        return (service.service as (...args: any[]) => GetService<T>)(
-          ...params
-        );
-      }
-      return service.service as GetService<T>;
     }
 
     _service.value = this.middlewarePipe.reduce<
       <T>(service: IServiceValue<T, TObject>, params: any[]) => GetService<T>
-    >(
-      (value, middleware) => (service, params) =>
-        middleware(service, params, value),
-      getDefaultValue
-    )(_service, params);
+        >(
+        (value, middleware) => (service, params) => middleware(service, params, value),
+        getDefaultValue)(_service, params);
 
     return _service.value;
   }
@@ -167,10 +203,10 @@ export class Scope<TObject = any> implements IScope<TObject> {
     service: IService<T>,
     value: T,
     type: ServiceType,
-    isFactory: boolean
+    constructorType: ConstructorTypes,
   ) {
     function getName() {
-      if (service.name === "service" && typeof value === "function") {
+      if (service.name === 'service' && typeof value === 'function') {
         return value.name;
       }
       return service.name;
@@ -178,8 +214,8 @@ export class Scope<TObject = any> implements IScope<TObject> {
     this.scope.set(service, {
       service: value,
       type,
-      isFactory,
-      getName
+      constructorType,
+      getName,
     });
   }
 }

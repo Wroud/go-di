@@ -4,7 +4,7 @@
       "baseUrl": "./src",
       "module": "commonjs",
       "moduleResolution": "node",
-      "target": "es2015",
+      "target": "ES5",
       "declaration": true,
       "jsx": "react",
       "forceConsistentCasingInFileNames": true,

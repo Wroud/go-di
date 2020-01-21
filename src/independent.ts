@@ -5,10 +5,10 @@ import {
   isScope,
   GetParameters,
   GetFunctionService,
-  GetService
-} from "./scope";
+  GetService,
+} from './scope';
 
-let currentScope: Array<IndependentScope> = [];
+const currentScope: Array<IndependentScope> = [];
 
 export interface IIndependentScope extends IScope {
   provide<T>(f: () => T): T;
@@ -58,25 +58,25 @@ export function createIService<T>(name?: string): IScopeIService<T> {
   }
 
   if (name) {
-    Object.defineProperty(service, "name", { value: name });
+    Object.defineProperty(service, 'name', { value: name });
   }
   return service;
 }
 
 export function getService<T>(
   service: IService<T>,
-  params: GetParameters<T>
+  params: GetParameters<T>,
 ): GetService<T> {
-  if (currentScope.length == 0) {
-    throw new Error("No scope provided. Use scope(() => service())");
+  if (currentScope.length === 0) {
+    throw new Error('No scope provided. Use scope(() => service())');
   }
   for (const list of currentScope) {
     if (list.has(service)) {
       return list.get(
         (service as any) as IService<(...args: any) => any>,
-        params
+        params,
       );
     }
   }
-  throw new Error(`Service not found`);
+  throw new Error('Service not found');
 }

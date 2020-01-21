@@ -15,16 +15,46 @@ npm i go-di
 ## Supports
 
 - ## Service types
+  - Class
   - Object
   - Factory
 - ## Service lifetimes
   - Singleton
   - Transient
+- ## Decorators
+  - `@injectable` for class
+  - `@serviceName` for property
 - ## Misc
   - Short call for functions
   - Middleware for service initialization
 
 ## Usage
+
+### Decorators
+
+```js
+import { injectable, createService, withScope } from "go-di";
+
+const objToAttach = {};
+const [obj, scope] = withScope(objToAttach);
+
+class ServiceA {
+  a = 1
+}
+const serviceA = createWService<ServiceA>();
+
+@injectable
+class ServiceB {
+  @serviceA a!: ServiceA;
+}
+const serviceB = createWService<ServiceB>();
+
+scope.attachClass(serviceA, ServiceA);
+scope.attachClass(serviceB, ServiceB);
+
+console.log(serviceB(obj).a.a);
+// 1
+```
 
 ### Independent
 
