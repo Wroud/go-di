@@ -2,18 +2,18 @@ import { expect } from 'chai';
 import 'mocha';
 
 import {
-  createIService as createService,
-  createService as createWService,
-  createScope,
-  withScope,
-  IScope,
+  createService,
+  ServiceCollection,
+  IServiceProvider,
+  ServiceType,
+  createServiceProviderContainer,
   injectable,
 } from '../src';
 
 describe('createService', () => {
   const testAValue = 1;
   const testBValue = 2;
-  const testCValue = 3;
+  // const testCValue = 3;
 
   it('function', () => {
     const serviceA = createService<number>();
@@ -24,288 +24,152 @@ describe('createService', () => {
 
   it('service has name', () => {
     const serviceA = createService<number>('name1');
-    const serviceB = createWService<number>('name2');
     expect(serviceA.name).to.be.equal('name1');
-    expect(serviceB.name).to.be.equal('name2');
   });
 
   it('factory overrides name', () => {
-    const scope = createScope();
+    const collection = new ServiceCollection();
+    const provider = collection
+      .getProvider(pipe => pipe.addMiddleware((descriptor, provider, value) => {
+        expect(descriptor.name).to.be.equal('serviceCFunc');
+        return value;
+      }));
+
     const serviceC = createService<typeof serviceCFunc>();
 
-    function serviceCFunc(scope: IScope, _obj: any) {}
+    function serviceCFunc(scope: IServiceProvider) {
+      return testAValue;
+    }
 
-    scope
-      .attachFactory(serviceC, serviceCFunc)
-      .useMiddleware((service, params, value) => {
-        expect(service.getName()).to.be.equal('serviceCFunc');
-        return value(service, params);
-      });
+    collection.addFunction(serviceC, serviceCFunc);
 
-    scope.provide(() => serviceC(null));
+    expect(serviceC(provider)).to.be.equal(testAValue);
   });
 
   it('attaches', () => {
     const serviceA = createService<number>();
     const serviceB = createService<number>();
-    const scope = createScope();
-    scope.attach(serviceA, testAValue).attach(serviceB, testBValue);
+    const collection = new ServiceCollection();
+    const provider = collection.getProvider();
+    collection
+      .addObject(serviceA, testAValue)
+      .addObject(serviceB, testBValue);
 
-    expect(scope.provide(() => serviceA())).to.be.equal(testAValue);
-    expect(scope.provide(() => serviceB())).to.be.equal(testBValue);
-  });
 
-  it('detaches', () => {
-    const serviceA = createService<number>();
-    const serviceB = createService<number>();
-    const scope = createScope();
-    scope.attach(serviceA, testAValue).attach(serviceB, testBValue);
-
-    expect(scope.provide(() => serviceA())).to.be.equal(testAValue);
-    expect(scope.provide(() => serviceB())).to.be.equal(testBValue);
-
-    scope.detach(serviceA).detach(serviceB);
-
-    expect(() => serviceA(scope)).to.throw(Error, 'Service not found');
-    expect(() => serviceB(scope)).to.throw(Error, 'Service not found');
-  });
-
-  it('currying', () => {
-    const serviceA = createService<number>();
-    const serviceB = createService<number>();
-    const scope = createScope();
-    scope.attach(serviceA, testAValue).attach(serviceB, testBValue);
-
-    expect(
-      scope.provide(() => serviceA(a => serviceB(b => a + b))),
-    ).to.be.equal(testAValue + testBValue);
+    expect(serviceA(provider)).to.be.equal(testAValue);
+    expect(serviceB(provider)).to.be.equal(testBValue);
   });
 
   it('multiple scopes', () => {
     const serviceA = createService<number>();
     const serviceB = createService<number>();
-    const scope = createScope();
-    const scopeSecond = createScope();
-    scope.attach(serviceB, testBValue);
+    const collection = new ServiceCollection();
+    const provider = collection.getProvider();
+    const scope = provider.createScope();
 
-    scopeSecond.attach(serviceA, testCValue);
+    collection
+      .addObject(serviceA, testAValue)
+      .addObject(serviceB, testBValue, ServiceType.Scoped);
 
-    expect(
-      scope.provide(() => serviceB(a => scopeSecond.provide(() => serviceA(b => a + b)))),
-    ).to.be.equal(testBValue + testCValue);
+
+    expect(serviceA(provider)).to.be.equal(testAValue);
+    expect(() => serviceB(provider)).to.throw(Error, 'Scope not provided');
+    expect(serviceB(scope)).to.be.equal(testBValue);
   });
 
-  it('restores scope', () => {
+  it('hierarchical scopes', () => {
     const serviceA = createService<number>();
     const serviceB = createService<number>();
-    const scope = createScope();
-    const scopeSecond = createScope();
-    scope.attach(serviceB, testBValue);
 
-    scopeSecond.attach(serviceA, testCValue);
+    const collection = new ServiceCollection();
+    const collectionB = new ServiceCollection();
 
-    expect(
-      scope.provide(
-        () => scopeSecond.provide(() => serviceA(b => b)) + serviceB(a => a),
-      ),
-    ).to.be.equal(testBValue + testCValue);
+    const provider = collection.getProvider();
+    const scope = provider.createScope(collectionB);
+
+    collection.addObject(serviceA, testAValue);
+    collectionB.addObject(serviceB, testBValue, ServiceType.Scoped);
+
+    expect(serviceA(provider)).to.be.equal(testAValue);
+    expect(() => serviceB(provider)).to.throw(Error, 'Service descriptor not found');
+    expect(serviceB(scope)).to.be.equal(testBValue);
+    expect(serviceA(scope)).to.be.equal(testAValue);
   });
 
-  it('scope inheritance', () => {
+  it('provider container', () => {
+    const obj = {};
+    const collection = new ServiceCollection();
+    const provider = createServiceProviderContainer(obj, collection.getProvider());
     const serviceA = createService<number>();
     const serviceB = createService<number>();
-    const scope = createScope();
-    const scopeSecond = createScope();
-    scope.attach(serviceB, testBValue);
 
-    scopeSecond.attach(serviceA, testCValue);
+    collection
+      .addObject(serviceA, testAValue)
+      .addObject(serviceB, testBValue);
 
-    expect(
-      scopeSecond.provide(() => scope.provide(() => serviceA(b => b) + serviceB(a => a))),
-    ).to.be.equal(testBValue + testCValue);
-  });
 
-  it('with scope', () => {
-    interface IStore {}
-    const [obj, objScope] = withScope({} as IStore);
-    const serviceA = createWService<number>();
-    const serviceB = createWService<number>();
-    const arg0 = 5;
-    const arg1 = 'hello';
-    const fnc = (a: number, b: number, c: number, d: string) => a + b + c + d;
-
-    objScope.attach(serviceA, testAValue).attach(serviceB, testBValue);
-
-    function caller<T>(
-      f: (arg: typeof obj, othern: number, argt: string) => T,
-      othern: number,
-      argt: string,
-    ): T {
-      return f(obj, othern, argt);
-    }
-
-    expect(serviceA(obj)).to.be.equal(testAValue);
-    expect(serviceB(obj)).to.be.equal(testBValue);
-    expect(
-      caller(
-        serviceB(b => serviceA(a => (ps, arg0, arg1) => fnc(a, b, arg0, arg1))),
-        arg0,
-        arg1,
-      ),
-    ).to.be.equal(fnc(testAValue, testBValue, arg0, arg1));
-  });
-
-  it('factory withScope', () => {
-    interface IStore {}
-    const [obj, objScope] = withScope({} as IStore);
-    const serviceA = createWService<number>();
-    const serviceB = createWService<number>();
-    const serviceC = createWService<typeof serviceCFunc>();
-    const arg0 = 5;
-    const arg1 = 'hello';
-    const fnc = (a: number, b: number, c: number, d: string, e: number) => a + b + c + e + d;
-
-    function serviceCFunc(scope: IScope<IStore>, _obj: IStore) {
-      expect(_obj).to.be.equal(obj);
-      return serviceA(scope) + serviceB(scope);
-    }
-
-    objScope
-      .attach(serviceA, testAValue)
-      .attach(serviceB, testBValue)
-      .attachFactory(serviceC, serviceCFunc);
-
-    function caller<T>(
-      f: (arg: typeof obj, othern: number, argt: string) => T,
-      othern: number,
-      argt: string,
-    ): T {
-      return f(obj, othern, argt);
-    }
-
-    expect(serviceA(obj)).to.be.equal(testAValue);
-    expect(serviceB(obj)).to.be.equal(testBValue);
-    expect(serviceC(obj)).to.be.equal(testAValue + testBValue);
-    expect(
-      caller(
-        serviceB(b => serviceA(a => serviceC(c => (ps, arg0, arg1) => fnc(a, b, arg0, arg1, c)))),
-        arg0,
-        arg1,
-      ),
-    ).to.be.equal(
-      fnc(testAValue, testBValue, arg0, arg1, testAValue + testBValue),
-    );
-  });
-
-  it('throw without scope', () => {
-    const serviceA = createService<number>();
-    const scope = createScope();
-    scope.provide(() => {});
-    expect(() => serviceA()).to.throw();
+    expect(serviceA(provider)).to.be.equal(testAValue);
+    expect(serviceB(provider)).to.be.equal(testBValue);
   });
 
   it('factory', () => {
-    const serviceA = createService<number>();
-    const scope = createScope();
     let i = 0;
-    scope.attachFactory(serviceA, () => {
+    function factory() {
       i++;
       return i;
-    });
-    expect(serviceA(scope)).to.be.equal(1);
-    expect(serviceA(scope)).to.be.equal(2);
+    }
+    const collection = new ServiceCollection();
+    const provider = collection.getProvider();
+    const serviceA = createService<typeof factory>();
+
+    collection.addFunction(serviceA, factory);
+
+
+    expect(serviceA(provider)).to.be.equal(1);
+    expect(serviceA(provider)).to.be.equal(2);
     expect(i).to.be.equal(2);
   });
 
   it('Singleton factory', () => {
-    const serviceA = createService<number>();
-    const scope = createScope();
     let i = 0;
-    scope.attachFactory(
-      serviceA,
-      () => {
-        i++;
-        return i;
-      },
-      true,
-    );
-    expect(serviceA(scope)).to.be.equal(1);
-    expect(serviceA(scope)).to.be.equal(1);
+    function factory() {
+      i++;
+      return i;
+    }
+    const collection = new ServiceCollection();
+    const provider = collection.getProvider();
+    const serviceA = createService<typeof factory>();
+
+    collection.addFunction(serviceA, factory, ServiceType.Singleton);
+
+
+    expect(serviceA(provider)).to.be.equal(1);
+    expect(serviceA(provider)).to.be.equal(1);
     expect(i).to.be.equal(1);
   });
 
-  describe('short call', () => {
-    it('withScope', () => {
-      interface IStore {}
-      const [obj, objScope] = withScope({} as IStore);
-      const serviceC = createWService<typeof serviceCFunc>();
+  it('Scope factory', () => {
+    let i = 0;
+    function factory() {
+      i++;
+      return i;
+    }
+    const collection = new ServiceCollection();
+    const provider = collection.getProvider();
+    const serviceA = createService<typeof factory>();
 
-      function serviceCFunc(scope: IScope<IStore>, _obj: IStore, arg: string) {
-        return arg;
-      }
+    collection.addFunction(serviceA, factory, ServiceType.Scoped);
 
-      objScope.attachFactory(serviceC, serviceCFunc);
+    const scopeA = provider.createScope();
+    const scopeB = provider.createScope();
 
-      expect(serviceC(obj, 'value')).to.be.equal('value');
-      expect(serviceC(v => () => v, 'value')(obj)).to.be.equal('value');
-    });
-    it('independent', () => {
-      const scope = createScope();
-      const serviceC = createService<typeof serviceCFunc>();
-
-      function serviceCFunc(arg: string) {
-        return arg;
-      }
-
-      scope.attach(serviceC, serviceCFunc);
-
-      expect(serviceC(scope, 'value')).to.be.equal('value');
-      expect(scope.provide(() => serviceC(v => v, 'value'))).to.be.equal(
-        'value',
-      );
-    });
-  });
-
-  describe('middleware', () => {
-    it('independent', () => {
-      const scope = createScope();
-      const serviceC = createService<typeof serviceCFunc>();
-
-      function serviceCFunc(scope: IScope, _obj: any, arg: string) {
-        return arg;
-      }
-
-      scope
-        .attachFactory(serviceC, serviceCFunc)
-        .useMiddleware((service, params, value) => {
-          expect(params[0]).to.be.equal('value');
-          return value(service, params);
-        });
-
-      expect(scope.provide(() => serviceC(null, 'value'))).to.be.equal('value');
-      expect(scope.provide(() => serviceC(v => v, 'value'))).to.be.equal(
-        'value',
-      );
-    });
-    it('withScope', () => {
-      interface IStore {}
-      const [obj, objScope] = withScope({} as IStore);
-      const serviceC = createWService<typeof serviceCFunc>();
-
-      function serviceCFunc(scope: IScope<IStore>, _obj: IStore, arg: string) {
-        return arg;
-      }
-
-      objScope
-        .attachFactory(serviceC, serviceCFunc)
-        .useMiddleware((service, params, value) => {
-          expect(params[0]).to.be.equal('value');
-          return value(service, params);
-        });
-
-      expect(serviceC(obj, 'value')).to.be.equal('value');
-      expect(serviceC(v => () => v, 'value')(obj)).to.be.equal('value');
-    });
+    expect(serviceA(scopeA)).to.be.equal(1);
+    expect(serviceA(scopeA)).to.be.equal(1);
+    expect(serviceA(scopeB)).to.be.equal(2);
+    expect(serviceA(scopeB)).to.be.equal(2);
+    expect(serviceA(scopeA)).to.be.equal(1);
+    expect(serviceA(scopeA)).to.be.equal(1);
+    expect(i).to.be.equal(2);
   });
 });
 
@@ -316,26 +180,29 @@ describe('Decorator', () => {
     class ServiceA {
       a = 1
     }
-    const serviceA = createWService<ServiceA>();
+    const serviceA = createService<ServiceA>();
 
     class ServiceC {
       b = 23
     }
-    const serviceC = createWService<ServiceC>();
+    const serviceC = createService<ServiceC>();
 
     @injectable
     class ServiceB {
       @serviceA() a!: ServiceA;
       @serviceC() c!: ServiceC;
     }
-    const serviceB = createWService<ServiceB>();
-    interface IStore {}
-    const [obj, objScope] = withScope({} as IStore);
+    const serviceB = createService<ServiceB>();
 
-    objScope.attachClass(serviceA, ServiceA);
-    objScope.attachClass(serviceB, ServiceB);
-    objScope.attachClass(serviceC, ServiceC);
+    const collection = new ServiceCollection();
+    const provider = collection.getProvider();
 
-    expect([serviceB(obj).a.a, serviceB(obj).c.b]).to.be.deep.equal(testValue);
+    collection
+      .addClass(serviceA, ServiceA)
+      .addClass(serviceB, ServiceB)
+      .addClass(serviceC, ServiceC);
+
+
+    expect([serviceB(provider).a.a, serviceB(provider).c.b]).to.be.deep.equal(testValue);
   });
 });

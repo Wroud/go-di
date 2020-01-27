@@ -21,11 +21,11 @@ npm i go-di
 - ## Service lifetimes
   - Singleton
   - Transient
+  - Scoped
 - ## Decorators
   - `@injectable` for class
   - `@serviceName` for property
 - ## Misc
-  - Short call for functions
   - Middleware for service initialization
 
 ## Usage
@@ -33,10 +33,10 @@ npm i go-di
 ### Decorators
 
 ```js
-import { injectable, createService, withScope } from "go-di";
+import { injectable, createService, ServiceCollection } from "go-di";
 
-const objToAttach = {};
-const [obj, scope] = withScope(objToAttach);
+const collection = new ServiceCollection();
+const provider = collection.getProvider();
 
 class ServiceA {
   a = 1
@@ -49,176 +49,150 @@ class ServiceB {
 }
 const serviceB = createService<ServiceB>();
 
-scope.attachClass(serviceA, ServiceA);
-scope.attachClass(serviceB, ServiceB);
+collection
+  .addClass(serviceA, ServiceA)
+  .addClass(serviceB, ServiceB);
 
-console.log(serviceB(obj).a.a);
+console.log(serviceB(provider).a.a);
 // 1
 ```
 
-### Independent
+### Lifetime
 
 ```js
-import { createIService, createScope } from "go-di";
+import { createService, ServiceCollection } from "go-di";
 
-const service = createIService();
-const scope = createScope().attach(service, 1);
+const collection = new ServiceCollection();
+const provider = collection.getProvider();
 
-console.log(service(scope));
-// 1
-```
+const serviceA = createService<typeof myServiceA>();
+const serviceB = createService<typeof myServiceB>();
+const serviceС = createService<typeof myServiceC>();
 
-### withScope
-
-```js
-import { createService, withScope } from "go-di";
-
-const objToAttach = {};
-const [obj, scope] = withScope(objToAttach);
-const serviceA = createService();
-const serviceB = createService();
-
-scope.attach(serviceA, 1);
-scope.attach(serviceB, 2);
-
-console.log(serviceA(obj));
-// 1
-console.log(serviceA(scope));
-// 1
-
-serviceA(a => serviceB(b => (obj, c, d) => (obj.field = a + b + c + d)))(
-  obj,
-  3,
-  4
-);
-// obj.field = a + b + c + d
-// obj.field = 1 + 2 + 3 + 4
-
-console.log(obj.field);
-// 10
-```
-
-### attachFactory Transient
-
-```js
-import { createService, withScope } from "go-di";
-
-const objToAttach = {};
-const [obj, scope] = withScope(objToAttach);
-const serviceA = createService();
-const serviceB = createService();
-const serviceC = createService();
-
-function myFactory(scope){
-  return serviceA(scope) + serviceB(scope);
+let serviceACounter = 0;
+function myServiceA() {
+  return serviceACounter++;
 }
 
-scope.attach(serviceA, 1);
-scope.attach(serviceB, 2);
-scope.attachFactory(serviceC, myFactory);
-
-console.log(serviceC(scope));
-// 3
-
-serviceA(a =>
-  serviceB(b =>
-    serviceC(c =>
-      (obj, e, d) => (obj.field = a + b + c + d + e)
-  )
-)(obj, 3, 4);
-// obj.field = a + b + c + d + e
-// obj.field = 1 + 2 + 3 + 4 + 3
-
-console.log(obj.field)
-// 13
-```
-
-### attachFactory Singleton
-
-```js
-import { createService, withScope } from "go-di";
-
-const objToAttach = {};
-const [obj, scope] = withScope(objToAttach);
-const serviceA = createService();
-const serviceB = createService();
-const serviceC = createService();
-
-function myFactory(scope) {
-  console.log("myFactory initialized");
-  return serviceA(scope) + serviceB(scope);
+let serviceBCounter = 0;
+function myServiceB() {
+  return serviceBCounter++;
 }
 
-scope.attach(serviceA, 1);
-scope.attach(serviceB, 2);
-scope.attachFactory(serviceC, myFactory, true); // here true is flag thats we use for Singleton
+let serviceCCounter = 0;
+function myServiceC() {
+  return serviceCCounter++;
+}
 
-console.log(serviceC(scope));
-// myFactory initialized
-// 3
+collection
+  .addFunction(serviceA, myServiceA, ServiceType.Transient)
+  .addFunction(serviceB, myServiceB, ServiceType.Singleton)
+  .addFunction(serviceС, myServiceC, ServiceType.Scoped);
 
-console.log(serviceC(scope));
-// 3
-/* Message "myFactory initialized" isn't print to console second time */
+console.log(serviceA(provider), serviceACounter) // 0, 1
+console.log(serviceA(provider), serviceACounter) // 1, 2
+
+console.log(serviceB(provider), serviceBCounter) // 0, 1
+console.log(serviceB(provider), serviceBCounter) // 0, 1
+
+console.log(serviceC(provider), serviceCCounter) // throws error
+
+const scopeA = provider.createScope();
+console.log(serviceC(scopeA), serviceCCounter) // 0, 1
+console.log(serviceC(scopeA), serviceCCounter) // 0, 1
+
+const scopeB = provider.createScope();
+console.log(serviceC(scopeB), serviceCCounter) // 1, 2
+console.log(serviceC(scopeB), serviceCCounter) // 1, 2
+
+console.log(serviceC(scopeA), serviceCCounter) // 0, 2
+console.log(serviceC(scopeB), serviceCCounter) // 1, 2
 ```
 
-### Advanced
+### Hierarchical scope
 
 ```js
-import { createIService, createScope } from "go-di";
+import { createService, ServiceCollection } from "go-di";
 
-const serviceA = createIService<number>();
-const serviceB = createIService<number>();
+const collection = new ServiceCollection();
+const secondCollection = new ServiceCollection();
+const provider = collection.getProvider();
+const scope = provider.createScope(secondCollection);
 
-const scopeFirst = createScope();
-const scopeSecond = createScope();
+const serviceA = createService<typeof myServiceA>();
+const serviceB = createService<typeof myServiceB>();
+const serviceС = createService<typeof myServiceC>();
 
-scopeFirst
-  .attach(serviceA, 1)
-  .attach(serviceB, 2);
+let serviceACounter = 0;
+function myServiceA() {
+  return serviceACounter++;
+}
 
-console.log(scopeFirst.provide(() =>
-  serviceA(a =>
-    serviceB(b => a + b)
-)));
-// 3
+let serviceBCounter = 0;
+function myServiceB() {
+  return serviceBCounter++;
+}
 
-scopeSecond
-  .attach(serviceB, 44);
+let serviceCCounter = 0;
+function myServiceC() {
+  return serviceCCounter++;
+}
 
-console.log(scopeFirst.provide(() =>
-  serviceA(a =>
-    scopeSecond.provide(() => serviceB(b => a + b))
-)));
-// 45
+collection
+  .addFunction(serviceA, myServiceA, ServiceType.Transient)
+  .addFunction(serviceB, myServiceB, ServiceType.Singleton);
+
+secondCollection.addFunction(serviceС, myServiceC, ServiceType.Scoped);
+
+console.log(serviceA(provider), serviceACounter) // 0, 1
+console.log(serviceA(provider), serviceACounter) // 1, 2
+
+console.log(serviceB(provider), serviceBCounter) // 0, 1
+console.log(serviceB(provider), serviceBCounter) // 0, 1
+
+console.log(serviceC(provider), serviceCCounter) // throws error
+
+console.log(serviceC(scope), serviceCCounter) // 0, 1
+console.log(serviceC(scope), serviceCCounter) // 0, 1
+
+console.log(serviceA(scope), serviceACounter) // 0, 2
+console.log(serviceA(scope), serviceACounter) // 1, 2
+
+console.log(serviceB(scope), serviceBCounter) // 0, 1
+console.log(serviceB(scope), serviceBCounter) // 0, 1
 ```
 
 ### useMiddleware
 ```js
-const scope = createScope();
+import { createService, ServiceCollection } from "go-di";
 
-const serviceA = createIService<number>('serviceA');
-const serviceB = createIService<number>('serviceB');
-const serviceС = createIService<typeof myService>();
+const collection = new ServiceCollection();
+const provider = collection
+  .getProvider(pipe => pipe.addMiddleware((descriptor, provider, value, args)=> {
+    function getValue(descriptor, args) {
+      const _value = value(descriptor, args);
+      console.log(`${descriptor.name}(${args}) => ${_value}`)
+    }
+    return getValue;
+  }));
+
+const serviceA = createService<number>('serviceA');
+const serviceB = createService<number>('serviceB');
+const serviceС = createService<typeof myService>();
 
 function myService(arg) {}
 
-scope
-  .useMiddleware((service, params, value) => {
-    const _value = value(service, params);
-    console.log(`${service.getName()}(${params}) => ${_value}`)
-    return _value;
-  })
-  .attach(serviceA, 1)
-  .attach(serviceB, 2)
-  .attach(serviceС, myService);
+collection
+  .addObject(serviceA, 1)
+  .addObject(serviceB, 2)
+  .addFunction(serviceС, myService);
 
-serviceA(scope);
+serviceA(provider);
 // serviceA([]) => 1
 
-serviceB(scope);
+serviceB(provider);
 // serviceB([]) => 2
 
-serviceC(scope, "argument");
+serviceC(provider, "argument");
 // myService(["argument"]) => undefined
 ```

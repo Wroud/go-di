@@ -1,10 +1,4 @@
 import { INJECTOR } from './createService';
-import { IWithScope } from './withScope';
-
-export interface IClassService<TArgs extends any[]>{
-  new (services: IWithScope);
-  new (services: IWithScope, ...args: TArgs);
-}
 
 type Constructor<T = {}> = new (...args: any[]) => T;
 

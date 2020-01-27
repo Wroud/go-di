@@ -32,6 +32,7 @@ module.exports = {
     'curly': ['error', 'all'],
     'class-methods-use-this': 'off',
     'linebreak-style': ["error", "unix"],
+    'no-case-declarations': 'off',
     'no-underscore-dangle': 'off',
     'no-dupe-class-members': 'off',
     'no-empty': 'off',
